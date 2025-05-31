@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>湖北大学成绩计算器</title>
   <style>
-    /* ---------- 页面整体样式 ---------- */
+    /* ---------- 页面整体样式（保持原来） ---------- */
     body {
       font-family: "微软雅黑", Arial, sans-serif;
       background-color: #f5f5f5;
@@ -26,27 +25,7 @@
       padding: 20px;
     }
 
-    /* ---------- 表格样式 ---------- */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-    }
-    table th, table td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-      font-size: 14px;
-    }
-    table th {
-      background-color: #f0f0f0;
-      font-weight: bold;
-    }
-    tr:nth-child(even) {
-      background-color: #fafafa;
-    }
-
-    /* ---------- 按钮样式 ---------- */
+    /* 按钮样式（保持原来） */
     .btn {
       display: inline-block;
       padding: 8px 16px;
@@ -75,7 +54,51 @@
       background-color: #1976D2;
     }
 
-    /* ---------- 数据显示区域 ---------- */
+    /* 批量导入区域样式 */
+    #bulkImportContainer {
+      display: none;        /* 默认隐藏，点击“批量导入”按钮后展示 */
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px dashed #bbb;
+      border-radius: 4px;
+      background-color: #fafafa;
+    }
+    #bulkImportContainer textarea {
+      width: 100%;
+      height: 120px;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    #bulkImportContainer .hint {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    /* 课程表格样式（保持原来） */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+    table th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+    /* 统计区域样式（保持原来） */
     .stats {
       font-size: 1em;
       margin-top: 10px;
@@ -87,22 +110,45 @@
       width: 200px;
     }
 
-    /* ---------- 作者标注 ---------- */
-.author {
+    /* 作者标注（保持原来） */
+    .author {
       margin-top: 20px;
       font-size: 12px;
       color: #666;
-      text-align: right;
-}
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>湖北大学成绩计算器</h1>
   <div class="container">
-    <!-- “添加课程”按钮 -->
+    <!-- ---------- 按钮区：添加课程、批量导入、删除所有 ---------- -->
     <button class="btn btn-secondary" id="addCourseBtn">添加课程</button>
+    <button class="btn btn-secondary" id="bulkImportBtn">批量导入</button>
+    <button class="btn btn-danger" id="deleteAllBtn">删除所有课程</button>
 
-    <!-- 课程列表表格 -->
+    <!-- ---------- 批量导入隐藏区域 ---------- -->
+    <div id="bulkImportContainer">
+      <div class="hint">
+        可借助豆包等OCR和语言整理能力强的AI,对教务系统的数据整理成指定格式,然后粘贴到下框中<br>
+        方法: 将教务系统成绩完整复制或截图,上传到AI,说明"将数据整理成下列格式"<br>
+        格式: 课程名称,学分,成绩／等级(优秀/良好/中等/及格/不及格)<br>
+        例如：<br>
+        高等数学,5,92<br>
+        军事训练,3,良好<br>
+        计算机导论,2,78<br>
+        注意：<br>
+        &nbsp;&nbsp;1. “成绩／等级”一栏只能写数字（0–100）或“优秀/良好/中等/及格/不及格”。<br>
+        &nbsp;&nbsp;2. 每行间不能加空行。<br>
+      </div>
+      <textarea id="bulkText" placeholder="每行格式：课程名称,学分,成绩／等级"></textarea>
+      <div style="margin-top: 6px;">
+        <button class="btn btn-secondary" id="confirmBulkImportBtn">确认导入</button>
+        <button class="btn btn-danger" id="cancelBulkImportBtn">取消</button>
+      </div>
+    </div>
+
+    <!-- ---------- 课程列表表格 ---------- -->
     <table id="courseTable">
       <thead>
         <tr>
@@ -118,32 +164,27 @@
         <!-- JS 会动态填充这里的行 -->
       </tbody>
     </table>
-    <div style="text-align: right; margin-bottom: 10px;">
-      <button id="deleteAllBtn" class="btn btn-danger">删除所有课程</button>
-    </div>
 
-    <!-- 加权平均分、总学分、GPA 显示区域 -->
-    <div class="stats" id="statsDisplay" >
-     <table style="text-align: center; border-collapse: collapse; width: 85%; text-align: center;">
-       <tr>
-         <th style="border: 1px solid #ccc; padding: 6px;">总学分</th>
-         <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="totalCredits">0</span></td>
-       </tr>
-       <tr>
-         <th style="border: 1px solid #ccc; padding: 6px;">加权平均分</th>
-         <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="weightedAvg">0</span></td>
-       </tr>
-       <tr>
-         <th style="border: 1px solid #ccc; padding: 6px;">GPA</th>
-         <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="GPA">0</span></td>
-       </tr>
-     </table>
+    <!-- ---------- 统计区域：总学分、加权平均分、GPA ---------- -->
+    <div class="stats" id="statsDisplay">
+      <table style="text-align: center; border-collapse: collapse; width: 85%;">
+        <tr>
+          <th style="border: 1px solid #ccc; padding: 6px;">总学分</th>
+          <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="totalCredits">0</span></td>
+        </tr>
+        <tr>
+          <th style="border: 1px solid #ccc; padding: 6px;">加权平均分</th>
+          <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="weightedAvg">0</span></td>
+        </tr>
+        <tr>
+          <th style="border: 1px solid #ccc; padding: 6px;">GPA</th>
+          <td style="border: 1px solid #ccc; padding: 6px; width: 50%;"><span id="GPA">0</span></td>
+        </tr>
+      </table>
     </div>
   </div>
 
-  <p class="author" style="text-align: center; margin-top: 20px;">
-    by 茶闲时守新茶 with GPT-o4
-  </p>
+  <p class="author">by 茶闲时守新茶 with GPT-o4</p>
 
   <script>
     /**************************************************************************
@@ -174,12 +215,7 @@
     }
 
     /**************************************************************************
-     * 工具：将“等级制”映射到一个代表性的“百分制”分数（用于加权成绩和加权平均分）
-     *   - 优秀 → 90
-     *   - 良好 → 80
-     *   - 中等 → 70
-     *   - 及格 → 60
-     *   - 不及格 → 0
+     * 工具：将“等级制”映射到一个代表性的“百分制”分数（用于加权成绩计算）
      **************************************************************************/
     function letterToNumeric(letter) {
       switch (letter) {
@@ -205,8 +241,61 @@
     }
 
     /**************************************************************************
-     * 计算所有课程的“总学分”、“加权平均分”和“GPA”
-     * 说明：GPA 完全由加权平均分（weightedAvg）决定，按照：
+     * 新增：解析“批量导入”文本，将多行文本解析为课程对象数组
+     *  输入 text 格式示例（每行）：
+     *    课程名称,学分,成绩／等级
+     *  输出：{ name: "...", credit: "...", gradeType: "...", gradeNum/gradeLet: "..." } 的数组
+     **************************************************************************/
+    function parseBulkText(text) {
+      let lines = text.split(/\r?\n/);
+      let result = [];
+      lines.forEach((line, idx) => {
+        // 去掉左右空白并跳过空行
+        let trimmed = line.trim();
+        if (trimmed === "") return;
+
+        // 用逗号分割，如果你想支持其他分隔符（如分号、制表符），可在此处扩展
+        let parts = trimmed.split(",");
+        if (parts.length < 3) {
+          console.warn(`第 ${idx + 1} 行格式不正确，忽略：${trimmed}`);
+          return;
+        }
+        let name = parts[0].trim();
+        let creditStr = parts[1].trim();
+        let gradeStr = parts[2].trim();
+
+        // 学分要能解析为数字
+        let creditNum = parseFloat(creditStr);
+        if (isNaN(creditNum) || creditNum <= 0) {
+          console.warn(`第 ${idx + 1} 行学分不合法，已忽略：${trimmed}`);
+          return;
+        }
+
+        // 判断是“百分制”还是“等级制”
+        let courseObj = { name: name, credit: creditNum.toString() };
+        if (/^\d+(\.\d+)?$/.test(gradeStr)) {
+          // 如果纯数字，视为百分制
+          courseObj.gradeType = "percentage";
+          courseObj.gradeNum = gradeStr;
+        } else {
+          // 否则当做等级制，但只允许“优秀/良好/中等/及格/不及格”
+          let validLetters = ["优秀", "良好", "中等", "及格", "不及格"];
+          if (validLetters.includes(gradeStr)) {
+            courseObj.gradeType = "letter";
+            courseObj.gradeLet = gradeStr;
+          } else {
+            console.warn(`第 ${idx + 1} 行等级不合法，已忽略：${trimmed}`);
+            return;
+          }
+        }
+
+        result.push(courseObj);
+      });
+      return result;
+    }
+
+    /**************************************************************************
+     * 工具：根据“加权平均分”计算最终的 GPA（非连续 .5 制）
      *   90–100 → 4.0
      *   85–89  → 3.5
      *   80–84  → 3.0
@@ -216,56 +305,49 @@
      *   60–64  → 1.0
      *   <60    → 0.0
      **************************************************************************/
-   function calculateStats(courses) {
-      let totalCredits = 0;
-      let totalWeightedScore = 0; // 用于计算加权平均分 = sum(学分 × 百分制分数) / 总学分
-
-      courses.forEach(course => {
-      let cr = parseFloat(course.credit);
-      if (isNaN(cr) || cr <= 0) return;
-
-      // 拿到这门课的“百分制”分数（或映射后的等级分对应数值）
-      let numeric = getNumericGrade(course);
-      // 累加 加权成绩 = 学分 × 百分制分数
-      totalWeightedScore += cr * numeric;
-      // 累加 总学分
-      totalCredits += cr;
-    });
-
-    // 计算“加权平均分”
-    let weightedAvg = totalCredits === 0
-      ? 0
-      : (totalWeightedScore / totalCredits);
-
-    // 根据“加权平均分”映射出最终的 GPA（非连续 .5 制）
-    let gpaValue;
-    if (weightedAvg >= 90) {
-      gpaValue = 4.0;
-    } else if (weightedAvg >= 85) {
-      gpaValue = 3.5;
-    } else if (weightedAvg >= 80) {
-      gpaValue = 3.0;
-    } else if (weightedAvg >= 75) {
-      gpaValue = 2.5;
-    } else if (weightedAvg >= 70) {
-      gpaValue = 2.0;
-    } else if (weightedAvg >= 65) {
-      gpaValue = 1.5;
-    } else if (weightedAvg >= 60) {
-      gpaValue = 1.0;
-    } else {
-      gpaValue = 0.0;
+    function weightedAvgToGPA(weightedAvg) {
+      if (weightedAvg >= 90) return 4.0;
+      if (weightedAvg >= 85) return 3.5;
+      if (weightedAvg >= 80) return 3.0;
+      if (weightedAvg >= 75) return 2.5;
+      if (weightedAvg >= 70) return 2.0;
+      if (weightedAvg >= 65) return 1.5;
+      if (weightedAvg >= 60) return 1.0;
+      return 0.0;
     }
 
-    return {
-      totalCredits: totalCredits.toFixed(1),      // 保留一位小数
-      weightedAvg: weightedAvg.toFixed(2),        // 加权平均分保留两位小数
-      gpa: gpaValue.toFixed(1)                    // GPA 保留一位小数（比如“3.5”）
-    };
-  }
+    /**************************************************************************
+     * 计算所有课程的“总学分”、“加权平均分”和“GPA”
+     * 说明：GPA 完全由加权平均分决定，非连续 .5 制
+     **************************************************************************/
+    function calculateStats(courses) {
+      let totalCredits = 0;
+      let totalWeightedScore = 0; // sum(学分 × 百分制分数)
+
+      courses.forEach(course => {
+        let cr = parseFloat(course.credit);
+        if (isNaN(cr) || cr <= 0) return;
+
+        let numeric = getNumericGrade(course);
+        totalWeightedScore += cr * numeric;
+        totalCredits += cr;
+      });
+
+      let weightedAvg = totalCredits === 0
+        ? 0
+        : (totalWeightedScore / totalCredits);
+
+      let gpaValue = weightedAvgToGPA(weightedAvg);
+
+      return {
+        totalCredits: totalCredits.toFixed(1),
+        weightedAvg: weightedAvg.toFixed(2),
+        gpa: gpaValue.toFixed(1)
+      };
+    }
 
     /**************************************************************************
-     * 渲染整个“课程表格”以及“总学分”、“加权平均分”和“GPA”
+     * 渲染“课程表格”以及“总学分”、“加权平均分”和“GPA”
      **************************************************************************/
     function renderTable() {
       const tbody = document.querySelector("#courseTable tbody");
@@ -273,7 +355,6 @@
 
       let courses = loadCourses();
       courses.forEach((c, idx) => {
-        // 创建一行 <tr>
         let tr = document.createElement("tr");
 
         // 序号列
@@ -300,7 +381,7 @@
         }
         tr.appendChild(tdVal);
 
-        // 加权成绩
+        // 加权成绩：学分 × 百分制分数
         let tdWeighted = document.createElement("td");
         let numericGrade = getNumericGrade(c);
         let weightedScore = (parseFloat(c.credit) * numericGrade).toFixed(1);
@@ -309,13 +390,11 @@
 
         // 操作列：编辑 + 删除
         let tdOps = document.createElement("td");
-
-        // 编辑按钮
+        // 编辑按钮（与原来一致）
         let btnEdit = document.createElement("button");
         btnEdit.textContent = "编辑";
         btnEdit.className = "btn";
         btnEdit.addEventListener("click", () => {
-          // 跳转到 edit.html?index=idx
           window.location.href = `edit.html?index=${idx}`;
         });
         tdOps.appendChild(btnEdit);
@@ -338,28 +417,82 @@
         tbody.appendChild(tr);
       });
 
-      // 重新计算并显示“总学分”、“加权平均分”和“GPA”
+      // 计算并显示统计数据
       let stats = calculateStats(courses);
       document.getElementById("totalCredits").textContent = stats.totalCredits;
       document.getElementById("weightedAvg").textContent = stats.weightedAvg;
       document.getElementById("GPA").textContent = stats.gpa;
     }
 
+
     /**************************************************************************
-     * 页面初始化
+     * 批量导入：将 textarea 中的多行文本解析，并合并到原有课程列表中
+     **************************************************************************/
+    function importBulk() {
+      let text = document.getElementById("bulkText").value;
+      if (!text.trim()) {
+        alert("请先在文本框中输入或粘贴课程信息。");
+        return;
+      }
+
+      // 解析出新的课程数组
+      let newCourses = parseBulkText(text);
+      if (newCourses.length === 0) {
+        alert("未解析出任何合法课程信息，请检查格式后重试。");
+        return;
+      }
+
+      // 原有课程 + 新课程
+      let existing = loadCourses();
+      let merged = existing.concat(newCourses);
+      saveCourses(merged);
+
+      // 清空 textarea 并隐藏导入区域
+      document.getElementById("bulkText").value = "";
+      document.getElementById("bulkImportContainer").style.display = "none";
+
+      // 重新渲染表格
+      renderTable();
+      alert(`成功导入 ${newCourses.length} 门课程！`);
+    }
+
+    /**************************************************************************
+     * 页面初始化：绑定按钮点击事件，渲染表格
      **************************************************************************/
     document.addEventListener("DOMContentLoaded", () => {
-      // “添加课程”按钮，点击时跳转到 edit.html?index=new
+      // “添加课程”按钮
       document.getElementById("addCourseBtn").addEventListener("click", () => {
         window.location.href = "edit.html?index=new";
       });
-      // 添加“删除所有课程”按钮的事件监听
-  document.getElementById("deleteAllBtn").addEventListener("click", () => {
-    if (confirm("确定要删除所有课程吗？此操作不可撤销！")) {
-      localStorage.removeItem("courses");
-      renderTable();
-    }
-  });
+
+      // “删除所有课程”按钮
+      document.getElementById("deleteAllBtn").addEventListener("click", () => {
+        if (confirm("确定要删除所有课程吗？此操作不可撤销！")) {
+          localStorage.removeItem("courses");
+          renderTable();
+        }
+      });
+
+      // “批量导入”按钮：切换显示/隐藏导入区域
+      document.getElementById("bulkImportBtn").addEventListener("click", () => {
+        let container = document.getElementById("bulkImportContainer");
+        if (container.style.display === "none" || container.style.display === "") {
+          container.style.display = "block";
+        } else {
+          container.style.display = "none";
+        }
+      });
+
+      // “确认导入”按钮
+      document.getElementById("confirmBulkImportBtn").addEventListener("click", () => {
+        importBulk();
+      });
+
+      // “取消”按钮：清空并隐藏区域
+      document.getElementById("cancelBulkImportBtn").addEventListener("click", () => {
+        document.getElementById("bulkText").value = "";
+        document.getElementById("bulkImportContainer").style.display = "none";
+      });
 
       // 首次渲染表格
       renderTable();
@@ -367,6 +500,5 @@
   </script>
 </body>
 </html>
-
 
 
