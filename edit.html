@@ -1,312 +1,379 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>编辑课程</title>
-  <style>
-    /* ---------- 页面整体样式 ---------- */
-    body {
-      font-family: "微软雅黑", Arial, sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .form-container {
-      max-width: 500px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    label {
-      display: block;
-      margin-top: 10px;
-    }
-    input[type="text"],
-    input[type="number"],
-    select {
-      width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    .inline-group {
-      display: flex;
-      align-items: center;
-      margin-top: 10px;
-    }
-    .inline-group label {
-      margin-right: 8px;
-      font-weight: normal;
-    }
-    .inline-group input[type="radio"] {
-      margin-left: 12px;
-      margin-right: 4px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #4CAF50;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    .hidden {
-      display: none;
-    }
-    .btn-back {
-      background-color: #2196F3;
-      margin-right: 10px;
-    }
-    .btn-back:hover {
-      background-color: #1976D2;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>湖北大学成绩计算器</title>
+    <style>
+        /* ---------- 全局样式 ---------- */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-container, .results-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            padding: 20px;
+            width: 60%;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .inline-group {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .inline-group label {
+            margin-right: 8px;
+        }
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            border: none;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* ---------- 课程列表表格样式 ---------- */
+        .course-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .course-list th, .course-list td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        .course-list th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+
+        /* ---------- 隐藏用的 CSS 类 ---------- */
+        .hidden {
+            display: none;
+        }
+
+        /* ---------- 操作按钮（修改/删除）样式 ---------- */
+        .action-buttons button,
+        .action-buttons a {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background-color: #008CBA;    /* 默认背景：蓝色 */
+            border: none;
+            color: #fff;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .action-buttons button:hover,
+        .action-buttons a:hover {
+            background-color: #007B9E;    /* 悬停背景：深蓝 */
+        }
+        /* “修改”按钮单独设为绿色，与“删除”按钮区分开 */
+        .modify-btn {
+            background-color: #4CAF50;    /* 绿色背景 */
+        }
+        .modify-btn:hover {
+            background-color: #45a049;    /* 悬停时绿意加深 */
+        }
+
+        /* ---------- 清除所有课程按钮样式 ---------- */
+        .clear-all-btn {
+            margin-top: 15px;
+            background-color: #f44336;    /* 红色背景 */
+        }
+        .clear-all-btn:hover {
+            background-color: #d32f2f;    /* 悬停时深红 */
+        }
+
+        /* ---------- 页脚样式 ---------- */
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-  <h1 id="formTitle">添加课程</h1>
+    <h1>湖北大学成绩计算器</h1>
 
-  <div class="form-container">
-    <form id="courseForm">
-      <!-- 课程名称 -->
-      <label for="courseName">课程名称：</label>
-      <input type="text" id="courseName" name="courseName" placeholder="请输入课程名称" required />
+    <!-- 添加课程表单 -->
+    <div class="form-container">
+        <h2>添加课程</h2>
+        <form id="course-form">
+            <label for="course_name">课程名称：</label>
+            <input type="text" id="course_name" name="course_name" required />
 
-      <!-- 学分 -->
-      <label for="credit">学分：</label>
-      <input type="number" id="credit" name="credit" min="0" step="0.1" placeholder="如 3 或 2.5" required />
+            <label for="credit">学分：</label>
+            <input type="number" id="credit" name="credit" min="0" step="0.1" required />
 
-      <!-- 成绩类型：百分制 / 等级制 -->
-      <div class="inline-group">
-        <label>成绩类型：</label>
-        <input type="radio" id="typePercentage" name="gradeType" value="percentage" checked />
-        <label for="typePercentage">百分制</label>
-        <input type="radio" id="typeLetter" name="gradeType" value="letter" style="margin-left: 20px;" />
-        <label for="typeLetter">等级制</label>
-      </div>
+            <div class="inline-group">
+                <label>成绩类型：</label>
+                <label>
+                    <input type="radio" name="grade_type" value="percentage" checked onchange="toggleGradeInput()" />
+                    百分制成绩
+                </label>
+                <label style="margin-left: 20px;">
+                    <input type="radio" name="grade_type" value="letter" onchange="toggleGradeInput()" />
+                    等级制成绩
+                </label>
+            </div>
 
-      <!-- 如果选“百分制”，显示数字输入 -->
-      <div id="percentageInput">
-        <label for="gradeNum">成绩（0~100）：</label>
-        <input type="number" id="gradeNum" name="gradeNum" min="0" max="100" step="0.1" required />
-      </div>
+            <div id="percentage-input">
+                <label for="grade_number">成绩（0-100）：</label>
+                <input type="number" id="grade_number" name="grade_number" min="0" max="100" step="0.1" required />
+            </div>
 
-      <!-- 如果选“等级制”，显示下拉框 -->
-      <div id="letterInput" class="hidden">
-        <label for="gradeLet">等级：</label>
-        <select id="gradeLet" name="gradeLet" disabled>
-          <option value="优秀">优秀</option>
-          <option value="良好">良好</option>
-          <option value="中等">中等</option>
-          <option value="及格">及格</option>
-          <option value="不及格">不及格</option>
-        </select>
-      </div>
+            <div id="letter-input" class="hidden">
+                <label for="grade_letter">等级：</label>
+                <select id="grade_letter" name="grade_letter">
+                    <option value="优秀">优秀</option>
+                    <option value="良好">良好</option>
+                    <option value="中等">中等</option>
+                    <option value="及格">及格</option>
+                    <option value="不及格">不及格</option>
+                </select>
+            </div>
 
-      <!-- 提交按钮 & 返回按钮 -->
-      <div style="margin-top: 20px; text-align: center;">
-        <button type="button" class="btn-back" id="backBtn">返回列表</button>
-        <button type="submit" id="saveBtn">保存</button>
-      </div>
-    </form>
-  </div>
+            <button type="button" onclick="addCourse()">添加课程</button>
+        </form>
+    </div>
 
-  <script>
-    /**************************************************************************
-     * 从 URL 查询参数里解析出 index 值
-     *   - ?index=new 表示新增
-     *   - ?index=0、1、2… 表示编辑第 0、1、2… 条
-     **************************************************************************/
-    function getQueryParam(name) {
-      let params = new URLSearchParams(window.location.search);
-      return params.get(name);
-    }
+    <!-- 课程列表 -->
+    <div class="results-container">
+        <h2>课程列表</h2>
+        <table class="course-list" id="course-list">
+            <thead>
+                <tr>
+                    <th>课程名称</th>
+                    <th>学分</th>
+                    <th>成绩</th>
+                    <th>加权成绩</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 动态插入课程行 -->
+            </tbody>
+        </table>
+        <!-- 清除所有课程按钮 -->
+        <button class="clear-all-btn" onclick="clearAllCourses()">清除所有课程</button>
+    </div>
 
-    /**************************************************************************
-     * 工具：从 localStorage 加载课程列表
-     **************************************************************************/
-    function loadCourses() {
-      let raw = localStorage.getItem("courses");
-      if (!raw) return [];
-      try {
-        let arr = JSON.parse(raw);
-        if (Array.isArray(arr)) return arr;
-        return [];
-      } catch (e) {
-        console.error("解析 courses 出错：", e);
-        return [];
-      }
-    }
+    <!-- 统计结果 -->
+    <div class="results-container">
+        <h2>统计结果</h2>
+        <p id="total-credits">总学分：0</p>
+        <p id="weighted-avg">平均加权分：0</p>
+        <p id="gpa">GPA：0</p>
+    </div>
 
-    /**************************************************************************
-     * 工具：把课程列表写回 localStorage
-     **************************************************************************/
-    function saveCourses(arr) {
-      localStorage.setItem("courses", JSON.stringify(arr));
-    }
+    <div class="footer">
+        <p>作者：茶闲时等新茶 with GPT</p>
+    </div>
 
-    /**************************************************************************
-     * 切换“成绩类型”时，控制显示/隐藏对应输入框
-     **************************************************************************/
-    function toggleGradeInput() {
-      const percentageInputDiv = document.getElementById("percentageInput");
-      const letterInputDiv = document.getElementById("letterInput");
-      const gradeNumInput = document.getElementById("gradeNum");
-      const gradeLetSelect = document.getElementById("gradeLet");
+    <script>
+        // 存储所有课程的数组
+        const courses = JSON.parse(localStorage.getItem('courses')) || [];
 
-      const selected = document.querySelector('input[name="gradeType"]:checked').value;
-      if (selected === "percentage") {
-        percentageInputDiv.classList.remove("hidden");
-        letterInputDiv.classList.add("hidden");
-        gradeNumInput.disabled = false;
-        gradeNumInput.required = true;
-        gradeLetSelect.disabled = true;
-        gradeLetSelect.required = false;
-      } else {
-        percentageInputDiv.classList.add("hidden");
-        letterInputDiv.classList.remove("hidden");
-        gradeNumInput.disabled = true;
-        gradeNumInput.required = false;
-        gradeLetSelect.disabled = false;
-        gradeLetSelect.required = true;
-      }
-    }
+        // 页面加载时隐藏/显示对应的成绩输入项
+        function toggleGradeInput() {
+            const selectedType = document.querySelector('input[name="grade_type"]:checked').value;
+            const percentageDiv = document.getElementById("percentage-input");
+            const letterDiv = document.getElementById("letter-input");
 
-    /**************************************************************************
-     * 页面初始化：如果是“编辑”模式，则把原数据填充进表单
-     **************************************************************************/
-    document.addEventListener("DOMContentLoaded", () => {
-      // 获取 index 参数
-      const idx = getQueryParam("index");
+            if (selectedType === "percentage") {
+                percentageDiv.classList.remove("hidden");
+                letterDiv.classList.add("hidden");
+                document.getElementById("grade_number").required = true;
+                document.getElementById("grade_letter").required = false;
+            } else {
+                percentageDiv.classList.add("hidden");
+                letterDiv.classList.remove("hidden");
+                document.getElementById("grade_number").required = false;
+                document.getElementById("grade_letter").required = true;
+            }
+        }
 
-      // 绑定单选按钮切换事件
-      document.querySelectorAll('input[name="gradeType"]').forEach(radio => {
-        radio.addEventListener("change", toggleGradeInput);
-      });
+        // 添加课程到列表
+        function addCourse() {
+            const courseName = document.getElementById("course_name").value.trim();
+            if (!courseName) {
+                alert("请填写课程名称");
+                return;
+            }
 
-      // “返回列表”按钮：直接跳回 index.html
-      document.getElementById("backBtn").addEventListener("click", () => {
-        window.location.href = "index.html";
-      });
+            const credit = parseFloat(document.getElementById("credit").value);
+            if (isNaN(credit) || credit <= 0) {
+                alert("学分必须为大于 0 的数字");
+                return;
+            }
 
-      // 区分“新增”/“编辑”
-      if (idx !== null && idx !== "" && idx !== "new") {
-        // 编辑模式
-        document.getElementById("formTitle").textContent = "编辑课程";
-        let courses = loadCourses();
-        let index = parseInt(idx, 10);
-        if (!isNaN(index) && index >= 0 && index < courses.length) {
-          let course = courses[index];
-          // 填充表单
-          document.getElementById("courseName").value = course.name;
-          document.getElementById("credit").value = course.credit;
+            let gradeValue;
+            const gradeType = document.querySelector('input[name="grade_type"]:checked').value;
+            if (gradeType === "percentage") {
+                gradeValue = parseFloat(document.getElementById("grade_number").value);
+                if (isNaN(gradeValue) || gradeValue < 0 || gradeValue > 100) {
+                    alert("百分制成绩必须在 0 到 100 之间");
+                    return;
+                }
+            } else {
+                gradeValue = document.getElementById("grade_letter").value;
+            }
 
-          if (course.gradeType === "percentage") {
-            document.getElementById("typePercentage").checked = true;
+            // 计算加权成绩
+            const weightedScore = calculateWeightedScore(credit, gradeValue);
+
+            // 将新课程对象 push 到数组，并存入 localStorage
+            courses.push({
+                name: courseName,
+                credit: credit,
+                gradeType: gradeType,
+                grade: gradeValue,
+                weightedScore: weightedScore
+            });
+            localStorage.setItem('courses', JSON.stringify(courses));
+
+            // 渲染列表并计算结果
+            renderCourseList();
+            calculateResults();
+
+            // 清空表单
+            document.getElementById("course-form").reset();
             toggleGradeInput();
-            document.getElementById("gradeNum").value = course.gradeNum;
-          } else {
-            document.getElementById("typeLetter").checked = true;
-            toggleGradeInput();
-            document.getElementById("gradeLet").value = course.gradeLet;
-          }
-        } else {
-          alert("无效的 index 参数，跳转回列表");
-          window.location.href = "index.html";
-        }
-      } else {
-        // 新增模式
-        document.getElementById("formTitle").textContent = "添加课程";
-        // 默认选中“百分制”
-        document.getElementById("typePercentage").checked = true;
-        toggleGradeInput();
-      }
-
-      /************************************************************************
-       * 提交表单的逻辑：无论“新增”还是“编辑”，都合并到这里
-       ************************************************************************/
-      document.getElementById("courseForm").addEventListener("submit", function (e) {
-        e.preventDefault(); // 阻止默认提交
-
-        // 读取表单数据
-        let name = document.getElementById("courseName").value.trim();
-        let credit = parseFloat(document.getElementById("credit").value);
-        let gradeType = document.querySelector('input[name="gradeType"]:checked').value;
-        let gradeNum = null;
-        let gradeLet = null;
-        if (gradeType === "percentage") {
-          gradeNum = parseFloat(document.getElementById("gradeNum").value);
-        } else {
-          gradeLet = document.getElementById("gradeLet").value;
         }
 
-        if (!name) {
-          alert("请填写课程名称");
-          return;
-        }
-        if (isNaN(credit) || credit <= 0) {
-          alert("请填写有效的学分");
-          return;
-        }
-        if (gradeType === "percentage") {
-          if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 100) {
-            alert("请填写 0 到 100 之间的成绩");
-            return;
-          }
-        } else {
-          if (!gradeLet) {
-            alert("请从下拉菜单选择等级");
-            return;
-          }
-        }
-
-        // 读取原有列表
-        let courses = loadCourses();
-
-        if (idx !== null && idx !== "" && idx !== "new") {
-          // 编辑模式：替换原数组中的这一项
-          let index = parseInt(idx, 10);
-          if (!isNaN(index) && index >= 0 && index < courses.length) {
-            courses[index] = {
-              name: name,
-              credit: credit,
-              gradeType: gradeType,
-              gradeNum: gradeType === "percentage" ? gradeNum : null,
-              gradeLet: gradeType === "letter" ? gradeLet : null
+        // 根据学分与成绩（百分制或等级制）计算“加权成绩”
+        function calculateWeightedScore(credit, grade) {
+            const gradeMapping = {
+                "优秀": 95,
+                "良好": 85,
+                "中等": 75,
+                "及格": 65,
+                "不及格": 50
             };
-          } else {
-            alert("编辑出错，自动跳回列表");
-          }
-        } else {
-          // 新增模式：直接 push
-          courses.push({
-            name: name,
-            credit: credit,
-            gradeType: gradeType,
-            gradeNum: gradeType === "percentage" ? gradeNum : null,
-            gradeLet: gradeType === "letter" ? gradeLet : null
-          });
+            if (typeof grade === "number") {
+                return credit * grade;
+            } else {
+                return credit * gradeMapping[grade];
+            }
         }
 
-        // 写回 localStorage 并跳回列表
-        saveCourses(courses);
-        window.location.href = "index.html";
-      });
-    });
-  </script>
+        // 按照非连续梯度制计算 GPA
+        function calculateGPA(weightedAvg) {
+            if (weightedAvg >= 90 && weightedAvg <= 100) {
+                return 4.0;
+            } else if (weightedAvg >= 85 && weightedAvg <= 89) {
+                return 3.5;
+            } else if (weightedAvg >= 80 && weightedAvg <= 84) {
+                return 3.0;
+            } else if (weightedAvg >= 75 && weightedAvg <= 79) {
+                return 2.5;
+            } else if (weightedAvg >= 70 && weightedAvg <= 74) {
+                return 2.0;
+            } else if (weightedAvg >= 65 && weightedAvg <= 69) {
+                return 1.5;
+            } else if (weightedAvg >= 60 && weightedAvg <= 64) {
+                return 1.0;
+            } else {
+                return 0.0;
+            }
+        }
+
+        // 渲染课程列表到表格中
+        function renderCourseList() {
+            const tableBody = document.querySelector("#course-list tbody");
+            tableBody.innerHTML = ""; // 先清空
+
+            courses.forEach((course, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${course.name}</td>
+                    <td>${course.credit.toFixed(1)}</td>
+                    <td>${course.grade}</td>
+                    <td>${course.weightedScore.toFixed(1)}</td>
+                    <td class="action-buttons">
+                        <!-- 修改按钮：跳转到 edit.html 并带上课程索引 -->
+                        <a href="edit.html?courseIndex=${index}" class="modify-btn">修改</a>
+                        <!-- 删除按钮 -->
+                        <button onclick="deleteCourse(${index})">删除</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // 删除指定索引课程
+        function deleteCourse(index) {
+            if (index >= 0 && index < courses.length) {
+                courses.splice(index, 1);
+                localStorage.setItem('courses', JSON.stringify(courses));
+                renderCourseList();
+                calculateResults();
+            }
+        }
+
+        // 清除所有课程
+        function clearAllCourses() {
+            if (courses.length === 0) {
+                alert("当前没有课程可清除。");
+                return;
+            }
+            if (confirm("确定要清除所有课程吗？")) {
+                courses.length = 0;
+                localStorage.setItem('courses', JSON.stringify(courses));
+                renderCourseList();
+                calculateResults();
+            }
+        }
+
+        // 计算并显示“总学分”、“平均加权分”、“GPA”
+        function calculateResults() {
+            let totalCredits = 0;
+            let totalWeightedScore = 0;
+
+            courses.forEach(course => {
+                totalCredits += course.credit;
+                totalWeightedScore += course.weightedScore;
+            });
+
+            const weightedAvg = totalCredits === 0 ? 0 : totalWeightedScore / totalCredits;
+            const gpa = calculateGPA(weightedAvg);
+
+            document.getElementById("total-credits").textContent = `总学分：${totalCredits.toFixed(1)}`;
+            document.getElementById("weighted-avg").textContent = `平均加权分：${weightedAvg.toFixed(2)}`;
+            document.getElementById("gpa").textContent = `GPA：${gpa.toFixed(1)}`;
+        }
+
+        // 页面加载时渲染已有课程并显示“百分制”输入框
+        document.addEventListener("DOMContentLoaded", function() {
+            renderCourseList();
+            calculateResults();
+            toggleGradeInput();
+        });
+    </script>
 </body>
 </html>
