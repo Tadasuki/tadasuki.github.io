@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>编辑课程</title>
+  <style>
+    /* ---------- 页面整体样式 ---------- */
+    body {
+      font-family: "微软雅黑", Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-container {
+      max-width: 500px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .inline-group {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .inline-group label {
+      margin-right: 8px;
+      font-weight: normal;
+    }
+    .inline-group input[type="radio"] {
+      margin-left: 12px;
+      margin-right: 4px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .hidden {
+      display: none;
+    }
+    .btn-back {
+      background-color: #2196F3;
+      margin-right: 10px;
+    }
+    .btn-back:hover {
+      background-color: #1976D2;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="formTitle">添加课程</h1>
+
+  <div class="form-container">
+    <form id="courseForm">
+      <!-- 课程名称 -->
+      <label for="courseName">课程名称：</label>
+      <input type="text" id="courseName" name="courseName" placeholder="请输入课程名称" required />
+
+      <!-- 学分 -->
+      <label for="credit">学分：</label>
+      <input type="number" id="credit" name="credit" min="0" step="0.1" placeholder="如 3 或 2.5" required />
+
+      <!-- 成绩类型：百分制 / 等级制 -->
+      <div class="inline-group">
+        <label>成绩类型：</label>
+        <input type="radio" id="typePercentage" name="gradeType" value="percentage" checked />
+        <label for="typePercentage">百分制</label>
+        <input type="radio" id="typeLetter" name="gradeType" value="letter" style="margin-left: 20px;" />
+        <label for="typeLetter">等级制</label>
+      </div>
+
+      <!-- 如果选“百分制”，显示数字输入 -->
+      <div id="percentageInput">
+        <label for="gradeNum">成绩（0~100）：</label>
+        <input type="number" id="gradeNum" name="gradeNum" min="0" max="100" step="0.1" required />
+      </div>
+
+      <!-- 如果选“等级制”，显示下拉框 -->
+      <div id="letterInput" class="hidden">
+        <label for="gradeLet">等级：</label>
+        <select id="gradeLet" name="gradeLet" disabled>
+          <option value="优秀">优秀</option>
+          <option value="良好">良好</option>
+          <option value="中等">中等</option>
+          <option value="及格">及格</option>
+          <option value="不及格">不及格</option>
+        </select>
+      </div>
+
+      <!-- 提交按钮 & 返回按钮 -->
+      <div style="margin-top: 20px; text-align: center;">
+        <button type="button" class="btn-back" id="backBtn">返回列表</button>
+        <button type="submit" id="saveBtn">保存</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * 从 URL 查询参数里解析出 index 值
+     *   - ?index=new 表示新增
+     *   - ?index=0、1、2… 表示编辑第 0、1、2… 条
+     **************************************************************************/
+    function getQueryParam(name) {
+      let params = new URLSearchParams(window.location.search);
+      return params.get(name);
+    }
+
+    /**************************************************************************
+     * 工具：从 localStorage 加载课程列表
+     **************************************************************************/
+    function loadCourses() {
+      let raw = localStorage.getItem("courses");
+      if (!raw) return [];
+      try {
+        let arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return arr;
+        return [];
+      } catch (e) {
+        console.error("解析 courses 出错：", e);
+        return [];
+      }
+    }
+
+    /**************************************************************************
+     * 工具：把课程列表写回 localStorage
+     **************************************************************************/
+    function saveCourses(arr) {
+      localStorage.setItem("courses", JSON.stringify(arr));
+    }
+
+    /**************************************************************************
+     * 切换“成绩类型”时，控制显示/隐藏对应输入框
+     **************************************************************************/
+    function toggleGradeInput() {
+      const percentageInputDiv = document.getElementById("percentageInput");
+      const letterInputDiv = document.getElementById("letterInput");
+      const gradeNumInput = document.getElementById("gradeNum");
+      const gradeLetSelect = document.getElementById("gradeLet");
+
+      const selected = document.querySelector('input[name="gradeType"]:checked').value;
+      if (selected === "percentage") {
+        percentageInputDiv.classList.remove("hidden");
+        letterInputDiv.classList.add("hidden");
+        gradeNumInput.disabled = false;
+        gradeNumInput.required = true;
+        gradeLetSelect.disabled = true;
+        gradeLetSelect.required = false;
+      } else {
+        percentageInputDiv.classList.add("hidden");
+        letterInputDiv.classList.remove("hidden");
+        gradeNumInput.disabled = true;
+        gradeNumInput.required = false;
+        gradeLetSelect.disabled = false;
+        gradeLetSelect.required = true;
+      }
+    }
+
+    /**************************************************************************
+     * 页面初始化：如果是“编辑”模式，则把原数据填充进表单
+     **************************************************************************/
+    document.addEventListener("DOMContentLoaded", () => {
+      // 获取 index 参数
+      const idx = getQueryParam("index");
+
+      // 绑定单选按钮切换事件
+      document.querySelectorAll('input[name="gradeType"]').forEach(radio => {
+        radio.addEventListener("change", toggleGradeInput);
+      });
+
+      // “返回列表”按钮：直接跳回 index.html
+      document.getElementById("backBtn").addEventListener("click", () => {
+        window.location.href = "index.html";
+      });
+
+      // 区分“新增”/“编辑”
+      if (idx !== null && idx !== "" && idx !== "new") {
+        // 编辑模式
+        document.getElementById("formTitle").textContent = "编辑课程";
+        let courses = loadCourses();
+        let index = parseInt(idx, 10);
+        if (!isNaN(index) && index >= 0 && index < courses.length) {
+          let course = courses[index];
+          // 填充表单
+          document.getElementById("courseName").value = course.name;
+          document.getElementById("credit").value = course.credit;
+
+          if (course.gradeType === "percentage") {
+            document.getElementById("typePercentage").checked = true;
+            toggleGradeInput();
+            document.getElementById("gradeNum").value = course.gradeNum;
+          } else {
+            document.getElementById("typeLetter").checked = true;
+            toggleGradeInput();
+            document.getElementById("gradeLet").value = course.gradeLet;
+          }
+        } else {
+          alert("无效的 index 参数，跳转回列表");
+          window.location.href = "index.html";
+        }
+      } else {
+        // 新增模式
+        document.getElementById("formTitle").textContent = "添加课程";
+        // 默认选中“百分制”
+        document.getElementById("typePercentage").checked = true;
+        toggleGradeInput();
+      }
+
+      /************************************************************************
+       * 提交表单的逻辑：无论“新增”还是“编辑”，都合并到这里
+       ************************************************************************/
+      document.getElementById("courseForm").addEventListener("submit", function (e) {
+        e.preventDefault(); // 阻止默认提交
+
+        // 读取表单数据
+        let name = document.getElementById("courseName").value.trim();
+        let credit = parseFloat(document.getElementById("credit").value);
+        let gradeType = document.querySelector('input[name="gradeType"]:checked').value;
+        let gradeNum = null;
+        let gradeLet = null;
+        if (gradeType === "percentage") {
+          gradeNum = parseFloat(document.getElementById("gradeNum").value);
+        } else {
+          gradeLet = document.getElementById("gradeLet").value;
+        }
+
+        if (!name) {
+          alert("请填写课程名称");
+          return;
+        }
+        if (isNaN(credit) || credit <= 0) {
+          alert("请填写有效的学分");
+          return;
+        }
+        if (gradeType === "percentage") {
+          if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 100) {
+            alert("请填写 0 到 100 之间的成绩");
+            return;
+          }
+        } else {
+          if (!gradeLet) {
+            alert("请从下拉菜单选择等级");
+            return;
+          }
+        }
+
+        // 读取原有列表
+        let courses = loadCourses();
+
+        if (idx !== null && idx !== "" && idx !== "new") {
+          // 编辑模式：替换原数组中的这一项
+          let index = parseInt(idx, 10);
+          if (!isNaN(index) && index >= 0 && index < courses.length) {
+            courses[index] = {
+              name: name,
+              credit: credit,
+              gradeType: gradeType,
+              gradeNum: gradeType === "percentage" ? gradeNum : null,
+              gradeLet: gradeType === "letter" ? gradeLet : null
+            };
+          } else {
+            alert("编辑出错，自动跳回列表");
+          }
+        } else {
+          // 新增模式：直接 push
+          courses.push({
+            name: name,
+            credit: credit,
+            gradeType: gradeType,
+            gradeNum: gradeType === "percentage" ? gradeNum : null,
+            gradeLet: gradeType === "letter" ? gradeLet : null
+          });
+        }
+
+        // 写回 localStorage 并跳回列表
+        saveCourses(courses);
+        window.location.href = "index.html";
+      });
+    });
+  </script>
+</body>
+</html>

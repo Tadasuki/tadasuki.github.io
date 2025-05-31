@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>成绩计算器</title>
+  <style>
+    /* ---------- 页面整体样式 ---------- */
+    body {
+      font-family: "微软雅黑", Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+
+    /* ---------- 表格样式 ---------- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    table th {
+      background-color: #f0f0f0;
+    }
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+    /* ---------- 按钮样式 ---------- */
+    .btn {
+      display: inline-block;
+      padding: 8px 16px;
+      margin: 4px;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn:hover {
+      background-color: #45a049;
+    }
+    .btn-danger {
+      background-color: #f44336;
+    }
+    .btn-danger:hover {
+      background-color: #e53935;
+    }
+    .btn-secondary {
+      background-color: #2196F3;
+    }
+    .btn-secondary:hover {
+      background-color: #1976D2;
+    }
+
+    /* ---------- GPA 显示区域 ---------- */
+    .gpa-display {
+      font-size: 1.2em;
+      margin-top: 10px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <h1>成绩计算器</h1>
+  <div class="container">
+    <!-- “添加课程”按钮 -->
+    <button class="btn btn-secondary" id="addCourseBtn">添加课程</button>
+
+    <!-- 课程列表表格 -->
+    <table id="courseTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>课程名称</th>
+          <th>学分</th>
+          <th>成绩类型</th>
+          <th>成绩／等级</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- JS 会动态填充这里的行 -->
+      </tbody>
+    </table>
+
+    <!-- GPA 显示 -->
+    <div class="gpa-display" id="gpaDisplay">
+      当前 GPA：0.00
+    </div>
+  </div>
+
+  <script>
+    /**************************************************************************
+     * 工具函数：从 localStorage 读取“课程数组”，若不存在则返回空数组
+     **************************************************************************/
+    function loadCourses() {
+      let raw = localStorage.getItem("courses");
+      if (!raw) {
+        return [];
+      }
+      try {
+        let arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          return arr;
+        }
+        return [];
+      } catch (e) {
+        console.error("解析 courses 时出错：", e);
+        return [];
+      }
+    }
+
+    /**************************************************************************
+     * 工具函数：把“课程数组”写回 localStorage
+     **************************************************************************/
+    function saveCourses(arr) {
+      localStorage.setItem("courses", JSON.stringify(arr));
+    }
+
+    /**************************************************************************
+     * 工具函数：把百分制成绩 / 等级制映射为 4.0 制绩点
+     *   - gradeType === "percentage" 时，用 (number/100)*4
+     *   - gradeType === "letter" 时，根据映射表：
+     *       优秀 → 4.0
+     *       良好 → 3.0
+     *       中等 → 2.0
+     *       及格 → 1.0
+     *       不及格 → 0.0
+     **************************************************************************/
+    function gradeToPoint(gradeType, gradeNum, gradeLet) {
+      if (gradeType === "percentage") {
+        let num = Number(gradeNum);
+        if (isNaN(num) || num < 0) return 0;
+        let pt = (num / 100) * 4.0;
+        return pt > 4 ? 4.0 : pt; // cap at 4.0
+      } else {
+        // 等级制
+        switch (gradeLet) {
+          case "优秀": return 4.0;
+          case "良好": return 3.0;
+          case "中等": return 2.0;
+          case "及格": return 1.0;
+          case "不及格": return 0.0;
+          default: return 0.0;
+        }
+      }
+    }
+
+    /**************************************************************************
+     * 根据课程列表，计算整体 GPA
+     *   返回一个保留两位小数的字符串
+     **************************************************************************/
+    function calculateGPA(courses) {
+      let totalCredits = 0;
+      let totalPoints = 0;
+      for (let c of courses) {
+        let cr = Number(c.credit);
+        if (isNaN(cr) || cr <= 0) continue;
+        let pt = gradeToPoint(c.gradeType, c.gradeNum, c.gradeLet);
+        totalCredits += cr;
+        totalPoints += cr * pt;
+      }
+      if (totalCredits === 0) return "0.00";
+      let gpa = totalPoints / totalCredits;
+      return gpa.toFixed(2);
+    }
+
+    /**************************************************************************
+     * 渲染整个“课程表格”以及 GPA
+     **************************************************************************/
+    function renderTable() {
+      const tbody = document.querySelector("#courseTable tbody");
+      tbody.innerHTML = ""; // 先清空
+
+      let courses = loadCourses();
+      courses.forEach((c, idx) => {
+        // 1. 创建一行 <tr>
+        let tr = document.createElement("tr");
+
+        // 序号列
+        let tdIndex = document.createElement("td");
+        tdIndex.textContent = idx + 1;
+        tr.appendChild(tdIndex);
+
+        // 课程名称
+        let tdName = document.createElement("td");
+        tdName.textContent = c.name;
+        tr.appendChild(tdName);
+
+        // 学分
+        let tdCredit = document.createElement("td");
+        tdCredit.textContent = c.credit;
+        tr.appendChild(tdCredit);
+
+        // 成绩类型
+        let tdType = document.createElement("td");
+        tdType.textContent = c.gradeType === "percentage" ? "百分制" : "等级制";
+        tr.appendChild(tdType);
+
+        // 成绩／等级
+        let tdVal = document.createElement("td");
+        if (c.gradeType === "percentage") {
+          tdVal.textContent = c.gradeNum;
+        } else {
+          tdVal.textContent = c.gradeLet;
+        }
+        tr.appendChild(tdVal);
+
+        // 操作列：编辑 + 删除
+        let tdOps = document.createElement("td");
+
+        // 编辑按钮
+        let btnEdit = document.createElement("button");
+        btnEdit.textContent = "编辑";
+        btnEdit.className = "btn";
+        btnEdit.addEventListener("click", () => {
+          // 跳转到 edit.html?index=idx
+          window.location.href = `edit.html?index=${idx}`;
+        });
+        tdOps.appendChild(btnEdit);
+
+        // 删除按钮
+        let btnDel = document.createElement("button");
+        btnDel.textContent = "删除";
+        btnDel.className = "btn btn-danger";
+        btnDel.style.marginLeft = "8px";
+        btnDel.addEventListener("click", () => {
+          if (confirm(`确定要删除第 ${idx + 1} 门课吗？`)) {
+            courses.splice(idx, 1);
+            saveCourses(courses);
+            renderTable();
+          }
+        });
+        tdOps.appendChild(btnDel);
+
+        tr.appendChild(tdOps);
+        tbody.appendChild(tr);
+      });
+
+      // 重新计算并显示 GPA
+      let gpa = calculateGPA(courses);
+      document.getElementById("gpaDisplay").textContent = "当前 GPA：" + gpa;
+    }
+
+    /**************************************************************************
+     * 页面初始化
+     **************************************************************************/
+    document.addEventListener("DOMContentLoaded", () => {
+      // “添加课程”按钮，点击时跳转到 edit.html?index=new
+      document.getElementById("addCourseBtn").addEventListener("click", () => {
+        window.location.href = "edit.html?index=new";
+      });
+
+      // 首次渲染表格
+      renderTable();
+    });
+  </script>
+</body>
+</html>
