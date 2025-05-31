@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>成绩计算器</title>
+  <title>湖北大学成绩计算器</title>
   <style>
     /* ---------- 页面整体样式 ---------- */
     body {
@@ -17,7 +17,7 @@
       margin-bottom: 20px;
     }
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
       background-color: #fff;
       border-radius: 8px;
@@ -35,9 +35,11 @@
       border: 1px solid #ddd;
       padding: 8px;
       text-align: center;
+      font-size: 14px;
     }
     table th {
       background-color: #f0f0f0;
+      font-weight: bold;
     }
     tr:nth-child(even) {
       background-color: #fafafa;
@@ -72,16 +74,29 @@
       background-color: #1976D2;
     }
 
-    /* ---------- GPA 显示区域 ---------- */
-    .gpa-display {
-      font-size: 1.2em;
+    /* ---------- 数据显示区域 ---------- */
+    .stats {
+      font-size: 1em;
       margin-top: 10px;
+      text-align: right;
+      line-height: 1.6;
+    }
+    .stats span {
+      display: inline-block;
+      width: 200px;
+    }
+
+    /* ---------- 作者标注 ---------- */
+    .author {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #666;
       text-align: right;
     }
   </style>
 </head>
 <body>
-  <h1>成绩计算器</h1>
+  <h1>湖北大学成绩计算器</h1>
   <div class="container">
     <!-- “添加课程”按钮 -->
     <button class="btn btn-secondary" id="addCourseBtn">添加课程</button>
@@ -93,8 +108,8 @@
           <th>#</th>
           <th>课程名称</th>
           <th>学分</th>
-          <th>成绩类型</th>
           <th>成绩／等级</th>
+          <th>加权成绩</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -102,12 +117,32 @@
         <!-- JS 会动态填充这里的行 -->
       </tbody>
     </table>
-
-    <!-- GPA 显示 -->
-    <div class="gpa-display" id="gpaDisplay">
-      当前 GPA：0.00
+    <div style="text-align: right; margin-bottom: 10px;">
+      <button id="deleteAllBtn" class="btn btn-danger">删除所有课程</button>
     </div>
-  </div>
+
+    <!-- 加权平均分、总学分、GPA 显示区域 -->
+    <div class="stats" id="statsDisplay">
+     <table style="border-collapse: collapse; width: 40%; text-align: left;">
+       <tr>
+         <th style="border: 1px solid #ccc; padding: 6px;">总学分</th>
+         <td style="border: 1px solid #ccc; padding: 6px; width: 10%;"><span id="totalCredits">0</span></td>
+       </tr>
+       <tr>
+         <th style="border: 1px solid #ccc; padding: 6px;">加权平均分</th>
+         <td style="border: 1px solid #ccc; padding: 6px; width: 10%;"><span id="weightedAvg">0</span></td>
+       </tr>
+       <tr>
+         <th style="border: 1px solid #ccc; padding: 6px;">GPA</th>
+         <td style="border: 1px solid #ccc; padding: 6px; width: 10%;"><span id="gpa">0</span></td>
+       </tr>
+     </table>
+    </div>
+
+    <!-- 作者标注 -->
+<p class="author" style="text-align: center; margin-top: 20px;">
+  by 茶闲时守新茶 with GPT-o4
+</p>
 
   <script>
     /**************************************************************************
@@ -138,24 +173,67 @@
     }
 
     /**************************************************************************
-     * 工具函数：把百分制成绩 / 等级制映射为 4.0 制绩点
-     *   - gradeType === "percentage" 时，用 (number/100)*4
-     *   - gradeType === "letter" 时，根据映射表：
+     * 工具：将“等级制”映射到一个代表性的“百分制”分数（用于加权成绩和加权平均分）
+     *   - 优秀 → 90
+     *   - 良好 → 80
+     *   - 中等 → 70
+     *   - 及格 → 60
+     *   - 不及格 → 0
+     **************************************************************************/
+    function letterToNumeric(letter) {
+      switch (letter) {
+        case "优秀": return 90;
+        case "良好": return 80;
+        case "中等": return 70;
+        case "及格": return 60;
+        case "不及格": return 0;
+        default: return 0;
+      }
+    }
+
+    /**************************************************************************
+     * 工具：根据“百分制”或“等级制”获取此课程对应的百分制分数
+     **************************************************************************/
+    function getNumericGrade(course) {
+      if (course.gradeType === "percentage") {
+        let num = Number(course.gradeNum);
+        return isNaN(num) ? 0 : num;
+      } else {
+        return letterToNumeric(course.gradeLet);
+      }
+    }
+
+    /**************************************************************************
+     * 工具：根据“百分制”分数或“等级制”计算该课程的 GPA 点数（非连续 .5 制）
+     *   - 如果是“百分制”：按以下区间转换
+     *       90–100 → 4.0
+     *       85–89 → 3.5
+     *       80–84 → 3.0
+     *       75–79 → 2.5
+     *       70–74 → 2.0
+     *       65–69 → 1.5
+     *       60–64 → 1.0
+     *       <60 → 0
+     *   - 如果是“等级制”：直接映射为对应点数
      *       优秀 → 4.0
      *       良好 → 3.0
      *       中等 → 2.0
      *       及格 → 1.0
      *       不及格 → 0.0
      **************************************************************************/
-    function gradeToPoint(gradeType, gradeNum, gradeLet) {
-      if (gradeType === "percentage") {
-        let num = Number(gradeNum);
-        if (isNaN(num) || num < 0) return 0;
-        let pt = (num / 100) * 4.0;
-        return pt > 4 ? 4.0 : pt; // cap at 4.0
+    function gradeToGPA(course) {
+      if (course.gradeType === "percentage") {
+        let num = getNumericGrade(course);
+        if (num >= 90) return 4.0;
+        if (num >= 85) return 3.5;
+        if (num >= 80) return 3.0;
+        if (num >= 75) return 2.5;
+        if (num >= 70) return 2.0;
+        if (num >= 65) return 1.5;
+        if (num >= 60) return 1.0;
+        return 0.0;
       } else {
-        // 等级制
-        switch (gradeLet) {
+        switch (course.gradeLet) {
           case "优秀": return 4.0;
           case "良好": return 3.0;
           case "中等": return 2.0;
@@ -167,26 +245,39 @@
     }
 
     /**************************************************************************
-     * 根据课程列表，计算整体 GPA
-     *   返回一个保留两位小数的字符串
+     * 计算所有课程的“总学分”、“加权平均分”和“GPA”
+     * 返回一个对象 { totalCredits, weightedAvg, gpa }
      **************************************************************************/
-    function calculateGPA(courses) {
+    function calculateStats(courses) {
       let totalCredits = 0;
-      let totalPoints = 0;
-      for (let c of courses) {
-        let cr = Number(c.credit);
-        if (isNaN(cr) || cr <= 0) continue;
-        let pt = gradeToPoint(c.gradeType, c.gradeNum, c.gradeLet);
+      let totalWeightedScore = 0;  // 用于加权平均分 = sum(credit×numericGrade) / totalCredits
+      let totalPoints = 0;         // 用于 GPA = sum(credit×GPApoint) / totalCredits
+
+      courses.forEach(course => {
+        let cr = parseFloat(course.credit);
+        if (isNaN(cr) || cr <= 0) return;
+        // 1. 百分制分数（或映射后的“等级制”百分制值）
+        let numeric = getNumericGrade(course);
+        // 加权成绩 = 学分 × 百分制分数
+        totalWeightedScore += cr * numeric;
+        // 计算此课程的 GPA 点数
+        let p = gradeToGPA(course);
+        totalPoints += cr * p;
         totalCredits += cr;
-        totalPoints += cr * pt;
-      }
-      if (totalCredits === 0) return "0.00";
-      let gpa = totalPoints / totalCredits;
-      return gpa.toFixed(2);
+      });
+
+      let weightedAvg = totalCredits === 0 ? 0 : (totalWeightedScore / totalCredits);
+      let gpa = totalCredits === 0 ? 0 : (totalPoints / totalCredits);
+
+      return {
+        totalCredits: totalCredits.toFixed(1),
+        weightedAvg: weightedAvg.toFixed(2),
+        gpa: gpa.toFixed(2)
+      };
     }
 
     /**************************************************************************
-     * 渲染整个“课程表格”以及 GPA
+     * 渲染整个“课程表格”以及“总学分”、“加权平均分”和“GPA”
      **************************************************************************/
     function renderTable() {
       const tbody = document.querySelector("#courseTable tbody");
@@ -194,7 +285,7 @@
 
       let courses = loadCourses();
       courses.forEach((c, idx) => {
-        // 1. 创建一行 <tr>
+        // 创建一行 <tr>
         let tr = document.createElement("tr");
 
         // 序号列
@@ -212,11 +303,6 @@
         tdCredit.textContent = c.credit;
         tr.appendChild(tdCredit);
 
-        // 成绩类型
-        let tdType = document.createElement("td");
-        tdType.textContent = c.gradeType === "percentage" ? "百分制" : "等级制";
-        tr.appendChild(tdType);
-
         // 成绩／等级
         let tdVal = document.createElement("td");
         if (c.gradeType === "percentage") {
@@ -225,6 +311,13 @@
           tdVal.textContent = c.gradeLet;
         }
         tr.appendChild(tdVal);
+
+        // 加权成绩
+        let tdWeighted = document.createElement("td");
+        let numericGrade = getNumericGrade(c);
+        let weightedScore = (parseFloat(c.credit) * numericGrade).toFixed(1);
+        tdWeighted.textContent = weightedScore;
+        tr.appendChild(tdWeighted);
 
         // 操作列：编辑 + 删除
         let tdOps = document.createElement("td");
@@ -257,9 +350,11 @@
         tbody.appendChild(tr);
       });
 
-      // 重新计算并显示 GPA
-      let gpa = calculateGPA(courses);
-      document.getElementById("gpaDisplay").textContent = "当前 GPA：" + gpa;
+      // 重新计算并显示“总学分”、“加权平均分”和“GPA”
+      let stats = calculateStats(courses);
+      document.getElementById("totalCredits").textContent = stats.totalCredits;
+      document.getElementById("weightedAvg").textContent = stats.weightedAvg;
+      document.getElementById("gpaDisplay").textContent = stats.gpa;
     }
 
     /**************************************************************************
@@ -270,6 +365,13 @@
       document.getElementById("addCourseBtn").addEventListener("click", () => {
         window.location.href = "edit.html?index=new";
       });
+      // 添加“删除所有课程”按钮的事件监听
+  document.getElementById("deleteAllBtn").addEventListener("click", () => {
+    if (confirm("确定要删除所有课程吗？此操作不可撤销！")) {
+      localStorage.removeItem("courses");
+      renderTable();
+    }
+  });
 
       // 首次渲染表格
       renderTable();
