@@ -205,77 +205,64 @@
     }
 
     /**************************************************************************
-     * 工具：根据“百分制”分数或“等级制”计算该课程的 GPA 点数（非连续 .5 制）
-     *   - 如果是“百分制”：按以下区间转换
-     *       90–100 → 4.0
-     *       85–89 → 3.5
-     *       80–84 → 3.0
-     *       75–79 → 2.5
-     *       70–74 → 2.0
-     *       65–69 → 1.5
-     *       60–64 → 1.0
-     *       <60 → 0
-     *   - 如果是“等级制”：直接映射为对应点数
-     *       优秀 → 4.0
-     *       良好 → 3.0
-     *       中等 → 2.0
-     *       及格 → 1.0
-     *       不及格 → 0.0
-     **************************************************************************/
-    function gradeToGPA(course) {
-      if (course.gradeType === "percentage") {
-        let num = getNumericGrade(course);
-        if (num >= 90) return 4.0;
-        if (num >= 85) return 3.5;
-        if (num >= 80) return 3.0;
-        if (num >= 75) return 2.5;
-        if (num >= 70) return 2.0;
-        if (num >= 65) return 1.5;
-        if (num >= 60) return 1.0;
-        return 0.0;
-      } else {
-        switch (course.gradeLet) {
-          case "优秀": return 4.0;
-          case "良好": return 3.0;
-          case "中等": return 2.0;
-          case "及格": return 1.0;
-          case "不及格": return 0.0;
-          default: return 0.0;
-        }
-      }
-    }
-
-    /**************************************************************************
      * 计算所有课程的“总学分”、“加权平均分”和“GPA”
-     * 返回一个对象 { totalCredits, weightedAvg, gpa }
+     * 说明：GPA 完全由加权平均分（weightedAvg）决定，按照：
+     *   90–100 → 4.0
+     *   85–89  → 3.5
+     *   80–84  → 3.0
+     *   75–79  → 2.5
+     *   70–74  → 2.0
+     *   65–69  → 1.5
+     *   60–64  → 1.0
+     *   <60    → 0.0
      **************************************************************************/
-    function calculateStats(courses) {
+   function calculateStats(courses) {
       let totalCredits = 0;
-      let totalWeightedScore = 0;  // 用于加权平均分 = sum(credit×numericGrade) / totalCredits
-      let totalPoints = 0;         // 用于 GPA = sum(credit×GPApoint) / totalCredits
+      let totalWeightedScore = 0; // 用于计算加权平均分 = sum(学分 × 百分制分数) / 总学分
 
       courses.forEach(course => {
-        let cr = parseFloat(course.credit);
-        if (isNaN(cr) || cr <= 0) return;
-        // 1. 百分制分数（或映射后的“等级制”百分制值）
-        let numeric = getNumericGrade(course);
-        // 加权成绩 = 学分 × 百分制分数
-        totalWeightedScore += cr * numeric;
-        // 计算此课程的 GPA 点数
-        let p = gradeToGPA(course);
-        totalPoints += cr * p;
-        totalCredits += cr;
-      });
+      let cr = parseFloat(course.credit);
+      if (isNaN(cr) || cr <= 0) return;
 
-      let weightedAvg = totalCredits === 0 ? 0 : (totalWeightedScore / totalCredits);
-      let gpa = totalCredits === 0 ? 0 : (totalPoints / totalCredits);
+      // 拿到这门课的“百分制”分数（或映射后的等级分对应数值）
+      let numeric = getNumericGrade(course);
+      // 累加 加权成绩 = 学分 × 百分制分数
+      totalWeightedScore += cr * numeric;
+      // 累加 总学分
+      totalCredits += cr;
+    });
 
-      return {
-        totalCredits: totalCredits.toFixed(1),
-        weightedAvg: weightedAvg.toFixed(2),
-        gpa: gpa.toFixed(2)
-      };
+    // 计算“加权平均分”
+    let weightedAvg = totalCredits === 0
+      ? 0
+      : (totalWeightedScore / totalCredits);
+
+    // 根据“加权平均分”映射出最终的 GPA（非连续 .5 制）
+    let gpaValue;
+    if (weightedAvg >= 90) {
+      gpaValue = 4.0;
+    } else if (weightedAvg >= 85) {
+      gpaValue = 3.5;
+    } else if (weightedAvg >= 80) {
+      gpaValue = 3.0;
+    } else if (weightedAvg >= 75) {
+      gpaValue = 2.5;
+    } else if (weightedAvg >= 70) {
+      gpaValue = 2.0;
+    } else if (weightedAvg >= 65) {
+      gpaValue = 1.5;
+    } else if (weightedAvg >= 60) {
+      gpaValue = 1.0;
+    } else {
+      gpaValue = 0.0;
     }
+
+    return {
+      totalCredits: totalCredits.toFixed(1),      // 保留一位小数
+      weightedAvg: weightedAvg.toFixed(2),        // 加权平均分保留两位小数
+      gpa: gpaValue.toFixed(1)                    // GPA 保留一位小数（比如“3.5”）
+    };
+  }
 
     /**************************************************************************
      * 渲染整个“课程表格”以及“总学分”、“加权平均分”和“GPA”
